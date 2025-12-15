@@ -1,0 +1,42 @@
+version: "3.8"
+networks:
+    workflow-net:
+        name: workflow-net
+        driver: bridge
+
+services:
+  geth-node:
+    image: ethereum/client-go:stable
+    container_name: geth-node
+    ports:
+      - "8545:8545"   # RPC HTTP
+      - "30303:30303" # P2P
+      - "30303:30303/udp"
+    volumes:
+      - geth-data:/root/.ethereum
+    command:
+      [
+        "--http",
+        "--http.addr", "0.0.0.0",
+        "--http.vhosts", "*",
+        "--http.corsdomain", "*",
+        "--http.port", "8545",
+        "--http.api", "eth,net,web3,personal",
+        "--dev",
+        "--allow-insecure-unlock",
+        "--ipcdisable"
+      ]
+    restart: always
+    networks:
+        - workflow-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: always
+    networks:
+        - workflow-net
+volumes:
+  geth-data:
